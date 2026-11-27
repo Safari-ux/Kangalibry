@@ -1,0 +1,6 @@
+/build
+
+# Firma de la app: nunca versionar llaves ni contraseñas
+*.jks
+*.keystore
+keystore.properties
