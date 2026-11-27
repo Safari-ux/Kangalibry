@@ -7,7 +7,7 @@ App móvil Android nativa (Kotlin + Jetpack Compose) para el aprendizaje inicial
 | Nombre en pantalla | Kangalibry |
 | `rootProject.name` / `applicationId` | `TurKids` / `com.example.turkids` |
 | Asignatura | DSY1105 · Desarrollo de Aplicaciones Móviles |
-| Evaluación | Evaluación Parcial 3 (indicadores IE 3.1.1 a IE 3.3.2) |
+| Evaluación | Evaluación Parcial 5 (indicadores IE 3.1.1 a IE 3.3.2) |
 | Contenido | Ficticio, de prueba, sin datos personales reales |
 
 ---
@@ -51,7 +51,7 @@ app/src/main/java/com/example/turkids/
 ├── MainActivity.kt              raíz de composición, NavHost y permiso de ubicación
 ├── data/
 │   ├── model/                   Post, PaisJson
-│   └── remote/                  ApiService + RetrofitInstance (microservicio backend-turkids)
+│   └── remote/                  ApiService + RetrofitInstance (microservicio backend-Kangalibry)
 │                                PaisesApiService + RetrofitPaises (REST Countries)
 ├── model/                       estados de UI, BancoDeContenido, ValidadorUsuario, etc.
 ├── navigation/                  Screen (rutas) y NavigationEvent
@@ -105,7 +105,7 @@ La app usa **dos** Retrofit independientes, cada uno con su propio `Retrofit.Bui
 
 | | Microservicio propio | API externa pública |
 |---|---|---|
-| Servicio | `backend-turkids` (Spring Boot, ver `../backend-turkids`) | REST Countries |
+| Servicio | `backend-Kangalibry` (Spring Boot, ver `../backend-Kangalibry`) | REST Countries |
 | Cliente | `RetrofitInstance` + `ApiService` | `RetrofitPaises` + `PaisesApiService` |
 | URL base | `http://10.0.2.2:8080/` | `https://restcountries.com/` |
 | Uso en la app | Pantalla **Publicaciones** (CRUD) | Bandera y nombre del país en el Home |
@@ -114,7 +114,7 @@ La app usa **dos** Retrofit independientes, cada uno con su propio `Retrofit.Bui
 ### Microservicio propio (Publicaciones)
 
 ```
-PostScreen ──> PostViewModel ──> PostRepository ──> ApiService (Retrofit + Gson) ──HTTP──> backend-turkids
+PostScreen ──> PostViewModel ──> PostRepository ──> ApiService (Retrofit + Gson) ──HTTP──> backend-Kangalibry
    (Compose)   (StateFlow<PostUiState>)  (inyectable, mockeable)   (suspend)
 ```
 
@@ -127,14 +127,14 @@ PostScreen ──> PostViewModel ──> PostRepository ──> ApiService (Retr
 
 **Edición de una publicación:** al pulsar **Editar (PUT)** se abre un `AlertDialog` con dos campos, **Título** y **Contenido**, ya rellenos con los valores actuales. El botón **Guardar** solo se habilita si ninguno de los dos queda vacío (se ignoran los espacios en blanco). Al guardar, la pantalla arma el post con el título y el contenido escritos (sin recortes ni textos agregados) y `PostViewModel.actualizarPost` lo envía tal cual con `PUT /posts/{id}`; la respuesta del servidor reemplaza el post en la lista. **Cancelar** o tocar fuera del diálogo lo cierra sin enviar nada.
 
-El modelo JSON es el mismo en la app (`data/model/Post.kt`) y en el servidor: `userId`, `id`, `title`, `body`. Como el servicio guarda en memoria, los cambios persisten mientras el servidor esté encendido y se ven al pulsar **Reintentar** (que vuelve a hacer el `GET`).
+El modelo JSON es el mismo en la app (`data/model/Post.kt`) y en el servidor: `userId`, `id`, `title`, `body`. El servicio guarda en una base H2 (Spring Data JPA): los cambios persisten aunque se reinicie el servidor y se ven al pulsar **Reintentar** (que vuelve a hacer el `GET`).
 
 **Estados (`PostUiState`)**
 - **Carga de la lista:** `cargando` (indicador), éxito (`posts`) o `error` con botón **Reintentar**. El mensaje distingue falta de conexión (`IOException`), error del servidor (`HttpException` con su código) y otros errores.
 - **Escrituras:** `operacionEnCurso` desactiva los botones mientras se ejecuta una; el resultado llega en `mensaje` y se muestra en un `Snackbar`. Si una escritura falla, la lista no cambia.
 
 **Cómo probarlo**
-1. Levantar el microservicio (`cd ../backend-turkids && ./gradlew bootRun`, ver su README).
+1. Levantar el microservicio (`cd ../backend-Kangalibry && ./gradlew bootRun`, ver su README).
 2. Ejecutar la app en un **emulador** de Android Studio: `10.0.2.2` es el `localhost` del PC visto desde el emulador.
 3. En un **celular real** cambiar `BASE_URL` en `RetrofitInstance.kt` por la IP del PC en la red local (por ejemplo `http://192.168.1.50:8080/`); ambos deben estar en la misma red y el firewall debe permitir el puerto 8080.
 4. Si el servidor no está encendido, la pantalla muestra el error de conexión con **Reintentar**.
@@ -150,7 +150,7 @@ Se consulta con el código de país de la ubicación para mostrar bandera y nomb
 
 Pruebas unitarias con **JUnit 5 (Jupiter)**, **Kotest**, **MockK** y `kotlinx-coroutines-test`; las pruebas JUnit 4 anteriores siguen corriendo por el motor *vintage*. No necesitan emulador.
 
-**Estado actual:** los **115 tests unitarios de la app Android pasan** con `./gradlew testDebugUnitTest`, y los **5 tests con MockMvc** del microservicio `backend-turkids` también (`./gradlew test` dentro de esa carpeta).
+**Estado actual:** los **115 tests unitarios de la app Android pasan** con `./gradlew testDebugUnitTest`, y los **5 tests con MockMvc** del microservicio `backend-Kangalibry` también (`./gradlew test` dentro de esa carpeta).
 ```bash
 ./gradlew testDebugUnitTest          # Windows: gradlew.bat testDebugUnitTest
 ```
@@ -167,10 +167,10 @@ Reporte: `app/build/reports/tests/testDebugUnitTest/index.html`. En Android Stud
 | `ProveedoresUbicacionTest`, `UbicacionEstadoTest`, `PaisTest`, `PaisRepositoryTest` | Elección de proveedores (fused/red/GPS), textos de ubicación, país y bandera. |
 | `RespuestaOralTest`, `TestOralViewModelTest` | Comparación de lo dicho y lógica del test oral. |
 
-### Pruebas del microservicio (`backend-turkids`)
+### Pruebas del microservicio (`backend-Kangalibry`)
 `PostControllerTest` usa MockMvc sobre el contexto de Spring Boot y valida 5 casos: `GET /posts` (4 publicaciones precargadas), `POST` (id autoincremental desde 5, responde 201), `PUT` (actualiza usando el id de la ruta), `PUT` de un id inexistente (404) y `DELETE` (200 y luego 404).
 ```bash
-cd ../backend-turkids
+cd ../backend-Kangalibry
 ./gradlew test               # Windows: gradlew.bat test
 ```
 
@@ -246,7 +246,7 @@ Permisos del manifest: `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `RECORD
 |---|---|
 | Repositorio GitHub | `<COMPLETAR: URL del repositorio>` |
 | Tablero Trello | `<COMPLETAR: URL del tablero>` |
-| Microservicio `backend-turkids` | Carpeta `../backend-turkids` de este repositorio |
+| Microservicio `backend-Kangalibry` | Carpeta `../backend-Kangalibry` de este repositorio |
 
 - **Control de versiones:** ramas por funcionalidad y *commits* técnicos descriptivos; los cambios se suben con `git add .`, `git commit -m "…"` y `git push`.
 - **Planificación:** tareas distribuidas entre integrantes en Trello (columnas: Pendiente · En curso · En revisión · Hecho), cada una enlazada a su rama o *commit*.
@@ -258,5 +258,5 @@ Permisos del manifest: `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `RECORD
 - No hay login: el progreso es por perfil ficticio y vive solo en el dispositivo; si se borran los datos de la app se pierde.
 - Un solo punto de retoma por perfil e idioma.
 - El contenido es mínimo (3 unidades de 4 palabras).
-- El microservicio guarda en memoria: al apagarlo se pierden los cambios y vuelve a las 4 publicaciones iniciales. Para ver cambios hechos desde otro dispositivo hay que pulsar **Reintentar**.
+- El microservicio guarda en una base H2 local (carpeta `data/` del backend): los cambios sobreviven al reinicio; para volver a las 4 publicaciones iniciales hay que borrar esa carpeta con el servidor apagado. Para ver cambios hechos desde otro dispositivo hay que pulsar **Reintentar**.
 - La app solo funciona con las publicaciones si el microservicio está encendido y la `BASE_URL` es alcanzable desde el dispositivo.
