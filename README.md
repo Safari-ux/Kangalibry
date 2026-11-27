@@ -4,7 +4,7 @@ Aplicación móvil Android para el aprendizaje inicial de español de niños y n
 
 ## 1. Introducción y contexto
 
-**Problemática (simulada).** Los niños y niñas de habla turca que llegan a un entorno hispanohablante necesitan un apoyo lúdico para aprender sus primeras palabras en español. Kangalibry lo resuelve con un juego de lecciones por unidades: se muestra una palabra con su emoji, el usuario elige entre 3 alternativas, tiene una segunda oportunidad tras un error y gana estrellas por unidad. El contenido es ficticio y de prueba, sin datos personales reales.
+**Problemática.** Los niños y niñas de habla turca que llegan a un entorno hispanohablante necesitan un apoyo lúdico para aprender sus primeras palabras en español. Kangalibry lo resuelve con un juego de lecciones por unidades: se muestra una palabra con su emoji, el usuario elige entre 3 alternativas, tiene una segunda oportunidad tras un error y gana estrellas por unidad. El contenido es ficticio y de prueba, sin datos personales reales.
 
 **Público objetivo.** Público infantil: niños y niñas de alrededor de 10 años cuya lengua materna es el turco y quieren aprender español. Como extensión propia del proyecto, la app permite elegir el idioma de práctica (turco o español), de modo que también sirve para que alguien que sabe español practique turco.
 
