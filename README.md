@@ -1,87 +1,158 @@
 # Kangalibry / TurKids
 
-Aplicación móvil Android para el aprendizaje inicial de español de niños y niñas de habla turca, conectada a un **microservicio propio** que gestiona publicaciones (CRUD) y que además consume una **API externa pública** (REST Countries). El contenido es ficticio, de prueba y sin datos personales reales.
+Aplicación móvil Android para el aprendizaje inicial de español de niños y niñas de habla turca, integrada con un microservicio propio en Spring Boot y con una API externa pública. Proyecto de la asignatura DSY1105 · Desarrollo de Aplicaciones Móviles, presentado en la Evaluación Parcial 5 como avance hacia el Examen Final Transversal (EFT).
 
-- La **app** (Kotlin + Jetpack Compose) funciona como un juego de palabras con lecciones, estrellas por unidad, voz y ubicación. La pantalla **Publicaciones** permite listar, crear, editar y eliminar publicaciones en el microservicio.
-- El **microservicio** (Spring Boot) expone la API REST `/posts` y guarda los datos en memoria.
-- La **API externa** (REST Countries) se usa desde la app para mostrar el país y la bandera según la ubicación del dispositivo.
+## 1. Introducción y contexto
 
-## Estructura del repositorio
+**Problemática (simulada).** Los niños y niñas de habla turca que llegan a un entorno hispanohablante necesitan un apoyo lúdico para aprender sus primeras palabras en español. Kangalibry lo resuelve con un juego de lecciones por unidades: se muestra una palabra con su emoji, el usuario elige entre 3 alternativas, tiene una segunda oportunidad tras un error y gana estrellas por unidad. El contenido es ficticio y de prueba, sin datos personales reales.
+
+**Público objetivo.** Público infantil: niños y niñas de alrededor de 10 años cuya lengua materna es el turco y quieren aprender español. Como extensión propia del proyecto, la app permite elegir el idioma de práctica (turco o español), de modo que también sirve para que alguien que sabe español practique turco.
+
+**Integración de funcionalidades móviles avanzadas con servicios externos y propios.**
+
+| Componente | Qué aporta |
+|---|---|
+| Recursos nativos | Ubicación (GPS, fused y red), síntesis de voz (TextToSpeech) y reconocimiento de voz (SpeechRecognizer) |
+| Microservicio propio (`backend-kangalibry`) | API REST `/posts` con CRUD de publicaciones, consumida desde la pantalla **Publicaciones** de la app |
+| API externa pública (REST Countries) | Nombre y bandera del país a partir de la ubicación del dispositivo |
+| Persistencia local | Progreso del usuario (idioma, estrellas por unidad y lección en curso) con DataStore |
+
+## 2. Estructura del repositorio
 
 ```
-.
-├── Turkids-main/      app Android (proyecto de Android Studio)
-├── backend-turkids/   microservicio Spring Boot (API REST /posts)
-└── README.md          este archivo
+Kangalibry/
+├── kangalibry-main/       app Android (proyecto de Android Studio)
+├── backend-kangalibry/    microservicio Spring Boot (API REST /posts)
+└── README.md              este archivo
 ```
 
 | Carpeta | Contenido | Detalle técnico |
 |---|---|---|
-| [`Turkids-main/`](Turkids-main/) | App Android: pantallas, ViewModels, repositorios, pruebas unitarias e instrumentadas, configuración del APK firmado | [`Turkids-main/README.md`](Turkids-main/README.md) |
-| [`backend-turkids/`](backend-turkids/) | Microservicio con `PostController`, `PostService`, modelo `Post` y pruebas con MockMvc | [`backend-turkids/README.md`](backend-turkids/README.md) |
+| [`kangalibry-main/`](kangalibry-main/) | App Android: pantallas Compose, ViewModels, repositorios, pruebas unitarias e instrumentadas y configuración de firma del APK | [`kangalibry-main/README.md`](kangalibry-main/README.md) |
+| [`backend-kangalibry/`](backend-kangalibry/) | Microservicio: `PostController`, `PostService`, modelo `Post` y pruebas con MockMvc | [`backend-kangalibry/README.md`](backend-kangalibry/README.md) |
 
-## Arquitectura y tecnologías
+## 3. Arquitectura y tecnologías
 
-```
-App Android (Compose + MVVM)
-   │
-   ├── Retrofit ── HTTP ──> backend-turkids (Spring Boot, puerto 8080)   CRUD de /posts
-   │                         emulador: http://10.0.2.2:8080/
-   │
-   └── Retrofit ── HTTPS ─> REST Countries (https://restcountries.com/)  país y bandera
-```
+### App Android (`kangalibry-main`)
 
-| Lado | Tecnologías |
+Patrón **MVVM** con una sola actividad (`MainActivity`) y navegación por eventos (`MainViewModel` emite un `NavigationEvent`).
+
+| Capa | Responsabilidad |
 |---|---|
-| **Android** | Kotlin 2.2.10, Jetpack Compose (BOM 2026.02.01) y Navigation Compose, arquitectura MVVM con `StateFlow` y corrutinas, Retrofit 2.11.0 con Gson, DataStore Preferences 1.1.7 para el progreso, `minSdk` 24 / `targetSdk` 36, Gradle con AGP 9.2.1 |
-| **Recursos nativos** | Ubicación (GPS, fused y red), síntesis de voz (TextToSpeech) y reconocimiento de voz (SpeechRecognizer) |
-| **Backend** | Spring Boot 3.5.6 (`spring-boot-starter-web`), Java 17 o superior, Gradle Wrapper 8.14.3, API REST `/posts` con almacenamiento en memoria (`ConcurrentHashMap` + `AtomicInteger`) y CORS abierto |
-| **Pruebas** | JUnit 5, Kotest y MockK en Android; JUnit 5 y MockMvc (`spring-boot-starter-test`) en el backend |
+| `ui/screens` (Jetpack Compose) | Pantallas; solo conocen ViewModels |
+| `viewmodel` | Estado con `StateFlow` y corrutinas (`viewModelScope`); reciben repositorios o el validador por constructor mediante `TurKidsViewModelFactory` |
+| `repository` | Único punto de acceso a DataStore, `LocationManager`/`Geocoder` y a la red |
+| `data/remote` | Interfaces Retrofit y clientes: `ApiService` + `RetrofitInstance` (microservicio) y `PaisesApiService` + `RetrofitPaises` (API externa) |
+| `model` | Estados de UI, reglas de negocio (`BancoDeContenido`, `ValidadorUsuario`) y modelos |
 
-### API del microservicio
+Tecnologías: Kotlin 2.2.10, Jetpack Compose (BOM 2026.02.01) con Navigation Compose, corrutinas y `Flow`, Retrofit 2.11.0 con Gson, DataStore Preferences 1.1.7, `minSdk` 24 / `targetSdk` 36, Android Gradle Plugin 9.2.1. Pruebas con JUnit 5, Kotest y MockK.
 
-El modelo JSON es el mismo en la app y en el servidor: `userId`, `id`, `title`, `body`. Al iniciar el servidor hay 4 publicaciones precargadas (ids 1 a 4).
+### Microservicio (`backend-kangalibry`)
 
-| Método | Ruta | Respuesta |
+Spring Boot **3.5.6** con `spring-boot-starter-web`, Java 17 o superior y Gradle Wrapper 8.14.3. Arquitectura en capas:
+
+| Capa | Clase | Responsabilidad |
 |---|---|---|
-| `GET` | `/posts` | `200` con la lista completa |
-| `POST` | `/posts` | `201` con el post creado (el servidor asigna el `id`) |
-| `PUT` | `/posts/{id}` | `200` con el post actualizado, o `404` |
-| `DELETE` | `/posts/{id}` | `200` sin cuerpo, o `404` |
+| Controlador | `PostController` | Expone `/posts`, traduce el resultado a códigos HTTP (201, 200, 404) y habilita CORS (`@CrossOrigin(origins = "*")`) |
+| Servicio | `PostService` | Reglas y almacenamiento **en memoria**: `ConcurrentHashMap` para los datos y `AtomicInteger` para los ids autoincrementales |
+| Modelo | `Post` | `record` con `userId`, `id`, `title` y `body` |
 
-## Cómo ejecutar el proyecto completo (Quick Start)
+Al iniciar hay 4 publicaciones precargadas (ids 1 a 4); al apagar el servidor se pierden los cambios.
 
-**Requisitos:** JDK 17 o superior (sirve el que trae Android Studio), Android Studio con un emulador configurado e internet la primera vez para que Gradle descargue las dependencias.
+## 4. APIs y endpoints utilizados
 
-**1. Levantar el backend** (puerto `8080`)
+### Microservicio propio (`http://10.0.2.2:8080/` desde el emulador)
+
+El modelo JSON es el mismo en la app (`Post.kt`) y en el servidor.
+
+```json
+{ "userId": 1, "id": 1, "title": "Merhaba = Hola", "body": "..." }
+```
+
+| Método | Ruta | Descripción | Respuesta |
+|---|---|---|---|
+| `GET` | `/posts` | Lista completa, ordenada por `id` | `200` |
+| `POST` | `/posts` | Crea un post; el servidor asigna el `id` | `201` con el post creado |
+| `PUT` | `/posts/{id}` | Reemplaza el post con el enviado (la app lo envía desde su diálogo de edición) | `200` con el post actualizado · `404` |
+| `DELETE` | `/posts/{id}` | Elimina el post | `200` sin cuerpo · `404` |
+
+En la app, la pantalla **Publicaciones** usa `PostViewModel` → `PostRepository` → `ApiService`, con estados de carga, éxito y error (con **Reintentar**).
+
+### API externa pública: REST Countries
+
+| Método | URL | Uso |
+|---|---|---|
+| `GET` | `https://restcountries.com/v3.1/alpha/{codigo}?fields=name,flag,translations` | Con el código de país obtenido por geocodificación se muestra nombre y bandera. Si falla, la app usa el nombre del geocodificador o las coordenadas |
+
+Se accede con su propio cliente (`RetrofitPaises`) y repositorio (`PaisRepository`), sin interferir con el microservicio.
+
+## 5. Recursos nativos y APK firmado
+
+### Recursos nativos
+
+| Recurso | Implementación | Permisos del manifest |
+|---|---|---|
+| Ubicación (GPS / fused / red) | `UbicacionRepository` y `ProveedoresUbicacion`: con ubicación aproximada usa el proveedor fused (Android 12+) o la red; con ubicación precisa suma el GPS | `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` |
+| Reconocimiento de voz | `ReconocedorDeVoz` (envuelve `SpeechRecognizer`), usado en el test oral | `RECORD_AUDIO` |
+| Síntesis de voz | `Narrador` (envuelve `TextToSpeech`), botón **Escuchar** en las lecciones | — |
+
+El manifest también declara `INTERNET` y `usesCleartextTraffic="true"`, necesario porque el microservicio local usa HTTP (solo para desarrollo).
+
+### APK firmado (release)
+
+`app/build.gradle.kts` define el `signingConfig` **release** leyendo las credenciales de `keystore.properties` (en la raíz de `kangalibry-main`, a partir de `keystore.properties.example`) o de las variables de entorno `TURKIDS_STORE_FILE`, `TURKIDS_STORE_PASSWORD`, `TURKIDS_KEY_ALIAS` y `TURKIDS_KEY_PASSWORD`.
+
+- El archivo `.jks` **se mantiene fuera del repositorio**: `*.jks`, `*.keystore` y `keystore.properties` están en el `.gitignore`.
+- Compilar: `.\gradlew.bat assembleRelease` dentro de `kangalibry-main`. Resultado: `app/build/outputs/apk/release/app-release.apk`.
+- El `app-release.apk` firmado se publica en la sección **Releases** del repositorio de GitHub.
+
+La guía paso a paso (crear el keystore con `keytool`, configurar credenciales y verificar la firma) está en [`kangalibry-main/README.md`](kangalibry-main/README.md).
+
+## 6. Instalación, ejecución y pruebas unitarias
+
+**Requisitos:** JDK 17 o superior (sirve el de Android Studio), Android Studio con un emulador configurado e internet la primera vez para descargar las dependencias de Gradle.
+
+### Paso 1 · Levantar el backend (puerto 8080)
 
 ```powershell
-cd backend-turkids
+cd backend-kangalibry
 .\gradlew.bat bootRun
 ```
-En Linux o macOS: `./gradlew bootRun`. Déjalo corriendo; para comprobarlo abre `http://localhost:8080/posts` en el navegador.
+En Linux o macOS: `./gradlew bootRun`. Comprueba que responde abriendo `http://localhost:8080/posts`. Déjalo corriendo.
 
-**2. Ejecutar la app**
+### Paso 2 · Ejecutar la app en el emulador
 
-1. Abre la carpeta `Turkids-main` en Android Studio y espera a que termine la sincronización de Gradle.
+1. Abre la carpeta `kangalibry-main` en Android Studio y espera la sincronización de Gradle.
 2. Elige un emulador y pulsa **Run**.
 3. En el menú lateral entra a **Publicaciones**.
 
-La app se conecta al backend con `http://10.0.2.2:8080/` (definido en `RetrofitInstance.kt`): `10.0.2.2` es el `localhost` del PC visto desde el emulador. Como esa conexión usa HTTP, el manifest declara `usesCleartextTraffic` (solo para desarrollo).
+La app se conecta al backend con `http://10.0.2.2:8080/` (constante `BASE_URL` en `RetrofitInstance.kt`): en el emulador, `10.0.2.2` es el `localhost` del PC. En un celular real hay que usar la IP del PC en la red local (por ejemplo `http://192.168.1.50:8080/`) y permitir el puerto 8080 en el firewall. Si el backend está apagado, Publicaciones muestra el error de conexión con **Reintentar** y el resto de la app funciona igual.
 
-**Notas**
-- En un **celular real** hay que cambiar esa URL por la IP del PC en la red local (por ejemplo `http://192.168.1.50:8080/`) y permitir el puerto 8080 en el firewall.
-- Si el backend está apagado, la pantalla Publicaciones muestra el error de conexión con el botón **Reintentar**; el resto de la app funciona igual.
-- El backend guarda en memoria: al reiniciarlo se pierden los cambios y vuelven las 4 publicaciones iniciales.
-- Para generar el APK firmado (release) sigue la guía de [`Turkids-main/README.md`](Turkids-main/README.md).
+### Paso 3 · Pruebas automatizadas
 
-## Pruebas automatizadas
+| Módulo | Pruebas | Comando (dentro de la carpeta) |
+|---|---|---|
+| `kangalibry-main` | **115 pruebas unitarias** (JUnit 5, Kotest, MockK) | `.\gradlew.bat testDebugUnitTest` |
+| `backend-kangalibry` | **5 pruebas con MockMvc** | `.\gradlew.bat test` |
 
-| Módulo | Cantidad | Comando | Qué valida |
-|---|---|---|---|
-| App Android (`Turkids-main`) | **115 tests unitarios** | `.\gradlew.bat testDebugUnitTest` | Lógica de lecciones (acierto, segunda oportunidad, retoma), `ProgresoRepository` con DataStore en memoria, validación del formulario de registro, `PostRepository` y `PostViewModel` (GET, POST, PUT y DELETE), ubicación, país y test oral |
-| Microservicio (`backend-turkids`) | **5 tests con MockMvc** | `.\gradlew.bat test` | `GET` con las 4 publicaciones precargadas, `POST` con id autoincremental, `PUT` de un post existente, `PUT` de un id inexistente (404) y `DELETE` (200 y luego 404) |
+Qué validan:
+- **Android:** lógica de lecciones (acierto a la primera, segunda oportunidad y retoma), `ProgresoRepository` con DataStore en memoria, validación reactiva del formulario de registro, `PostRepository` y `PostViewModel` (GET, POST, PUT y DELETE), ubicación, país y test oral.
+- **Backend (`PostControllerTest`):** `GET` con las 4 publicaciones precargadas, `POST` con id autoincremental, `PUT` de un post existente, `PUT` de un id inexistente (404) y `DELETE` (200 y luego 404).
 
-Cada comando se ejecuta dentro de su carpeta (`cd Turkids-main` o `cd backend-turkids`); en Linux o macOS usa `./gradlew`. Los tests unitarios no necesitan emulador. La app también tiene una prueba instrumentada de `PostScreen` (`.\gradlew.bat connectedDebugAndroidTest`, requiere emulador o celular).
+Las pruebas unitarias no necesitan emulador. La app incluye además una prueba instrumentada de `PostScreen` (`.\gradlew.bat connectedDebugAndroidTest`, requiere emulador o celular). En Linux o macOS usa `./gradlew` en lugar de `.\gradlew.bat`.
 
-El detalle de qué cubre cada archivo de prueba está en [`Turkids-main/README.md`](Turkids-main/README.md#5-testing).
+## 7. Mapa para la defensa (Evaluación Parcial 5)
+
+Dónde está cada elemento que pide la pauta de defensa individual.
+
+| Paso de la defensa | Dónde verlo |
+|---|---|
+| 1. Inicio y entorno | Backend: `.\gradlew.bat bootRun` en `backend-kangalibry` (puerto 8080). App: emulador desde Android Studio. Dependencias: `kangalibry-main/gradle/libs.versions.toml` y `backend-kangalibry/build.gradle.kts` |
+| 2. Arquitectura y paquetes | App: `ui/screens`, `viewmodel`, `repository`, `data/remote`, `model` (sección 3). Backend: `controller`, `service`, `model` |
+| 3. Microservicio y endpoints | `PostController` (`GET`, `POST`, `PUT`, `DELETE` sobre `/posts`), consumidos por `ApiService`; pantalla **Publicaciones** |
+| 4. API externa | `PaisesApiService` + `RetrofitPaises` + `PaisRepository`. Diferencia con el microservicio: REST Countries es de terceros, solo lectura (`GET`), por HTTPS y con un contrato que no controlamos; `backend-kangalibry` es propio, con CRUD completo, HTTP local (`10.0.2.2`) y contrato definido por nosotros |
+| 5. Persistencia remota | Flujo: `PostScreen` → `PostViewModel` → `PostRepository` → `ApiService` → `PostController` → `PostService` (`ConcurrentHashMap`). Los datos viven en memoria del servidor |
+| 6. Pruebas unitarias | `.\gradlew.bat testDebugUnitTest` (app) y `.\gradlew.bat test` (backend). Se mockea `ApiService` en `PostRepositoryTest`, `PostRepository` en `PostViewModelTest` y `ProgresoRepository` en `LeccionViewModelTest`; `ProgresoRepositoryTest` usa un DataStore en memoria |
+| 7. APK firmado | Sección 5: `signingConfigs.release` en `app/build.gradle.kts`, `keystore.properties`, `.\gradlew.bat assembleRelease` |
+| 8. Colaboración | GitHub (commits y ramas) y Trello: `<COMPLETAR: URL del repositorio>` · `<COMPLETAR: URL del tablero>` |
+| 9. Modificación en tiempo real | Un endpoint nuevo toca, en orden: `PostService` → `PostController` → `ApiService` → `PostRepository` → `PostViewModel` → `PostScreen` y su prueba |
